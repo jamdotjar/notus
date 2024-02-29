@@ -9,15 +9,13 @@ use scan_fmt::scan_fmt;
 #[derive(Parser)]
 #[command(name = "notus", about="Notes for us", long_about = "A DND notes app with insane functionality (dungeon generation, dice rolling, markdown support, exporting)")]
 struct Cli {
+    #[arg( required = false)]    
+    note: Option<String>,
+
     #[command(subcommand)]
     command: Commands,
-    // /// Sets a custom output file
-    // #[arg(short, long, value_name = "FILE")]
-    // output: Option<PathBuf>,
+    
 
-    // /// Turn debugging information on
-    // #[arg(short, long, action = clap::ArgAction::Count)]
-    // debug: u8,
 }
 
 #[derive(Subcommand)]
@@ -27,17 +25,26 @@ enum Commands {
         #[arg()]
         input: String,
     }
+
 }
 fn main() {
 //initalize cli and Random number generator
     let cli = Cli::parse();
     let mut rng = rand::thread_rng();
-    match &cli.command {
+    if let Some(note) = cli.note {
+        println!("{}", note);
+    }
+    else {
+       match &cli.command {
         Commands::Roll { input } => {
-            let (num, die) = scan_fmt!(input, "{}d{}", i32, i32).unwrap();
+            let (num, die) = scan_fmt!(
+                input, "{}d{}", i32, i32).unwrap();
             roll(num, die, &mut rng)
         }
+        _ =>{ println!("you need to write something man") }
+    }  
     }
+   
 }  
 
 fn roll(num: i32, die: i32, rng: &mut rand::rngs::ThreadRng){
@@ -53,9 +60,13 @@ fn roll(num: i32, die: i32, rng: &mut rand::rngs::ThreadRng){
 
 #[test]
 fn test_roll_command() {
+    let mut rng = rand::thread_rng();
     let mut cmd = Command::cargo_bin("notus").unwrap();
-    cmd.arg("roll").arg("2d8");
+    //randomize the roll
+    let num = rng.gen_range(1..=6);
+    let die = rng.gen_range(1..=20);
+    cmd.arg("roll").arg(format!("{}d{}", num, die));
     cmd.assert()
        .success()
-       .stdout(predicate::str::contains("Rolling 2d8:"));
+       .stdout(predicate::str::contains(format!("Rolling {}d{}:", num, die)));
 }
