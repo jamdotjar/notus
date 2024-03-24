@@ -1,13 +1,12 @@
 use rand::Rng;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use clap::{Parser, Subcommand};
-use std::process::Command; // Run programs
+use clap::{Parser, Subcommand, Command, Arg, ArgMatches};
+use std::process::Command as StdCommand; // Renamed to avoid conflict with `clap::Command`
 use std::path::PathBuf;
-use assert_cmd::prelude::*; // Add methods on commands
-use predicates::prelude::{predicate::str, *}; // Used for writing assertions
+use assert_cmd::prelude::*;
+use predicates::prelude::*;
 use scan_fmt::scan_fmt;
-use chrono::DateTime;
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
 
@@ -122,52 +121,77 @@ enum NoteID {
     Path(PathBuf)
 }
 
+
 fn main() {
-//initalize cli and Random number generator
-    let mut notes: Vec<NoteID> = vec![];
-    let cli = Cli::parse();
-    let mut rng = rand::thread_rng();
-    if let Some(note) = cli.note {
-        println!("{}", note);
+    let matches = Command::new("notus")
+        .version("1.0")
+        .about("Notes for us")
+        .subcommand(Command::new("note")
+            .about("Manage notes")
+            .arg(Arg::new("NAME")
+                .help("The name of the note")
+                .required(true)
+                .multiple(true) // Allows multiple values
+                .takes_value(true))
+            .arg(Arg::new("tags")
+                .short("t")
+                .long("tags")
+                .help("Comma-separated tags for the note")
+                .takes_value(true)))
+        .subcommand(Command::new("roll")
+            .about("Rolls a die")
+            .arg(Arg::new("input")
+                .help("The dice roll notation (e.g., 2d6)")
+                .required(true)
+                .takes_value(true)))
+        .get_matches();
+
+    match matches.subcommand() {
+        ("note", Some(note_matches)) => {
+            handle_note_command(note_matches);
+        },
+        ("roll", Some(roll_matches)) => {
+            handle_roll_command(roll_matches);
+        },
+        _ => eprintln!("Command not recognized. Use --help for usage information."),
     }
-    else {
-       match &cli.command {
-        Commands::Roll { input } => {
-            let (num, die) = scan_fmt!(
-                input, "{}d{}", i32, i32).unwrap();
-            roll(num, die, &mut rng)
-        }
-        Commands::Note { new, active, edit, name, tags} => {
-            let path = PathBuf::from(format!("./notes/{}.json", name));
-            let tags = tags.split(',').map(|s| s.trim().to_string()).collect();
-            if *new == true {
-                let note = Note::new(name.clone(),
-                path, NoteType::Note,
-                tags, &mut notes);
-                note.save();
-            }
-        }   
-        _ =>{ println!("you need to write something man") }
-    }
-   
-}  
 }
 
-fn roll(num: i32, die: i32, rng: &mut rand::rngs::ThreadRng){
+fn handle_note_command(matches: &ArgMatches) {
+    let name = matches.values_of("NAME").unwrap().collect::<Vec<&str>>().join(" ");
+    let tags = matches.value_of("tags").unwrap_or("");
+
+    println!("Note name: {}", name);
+    println!("Tags: {}", tags);
+
+    let note = Note::new(name.clone(),
+    path, NoteType::Note,
+    tags, &mut notes);
+    note.save();
+}
+
+fn handle_roll_command(matches: &ArgMatches) {
+    let input = matches.value_of("input").unwrap();
+    let (num, die) = scan_fmt!(input, "{}d{}", i32, i32).unwrap(); // Ensure you have the scan_fmt crate for this
+    roll(num, die);
+}
+
+fn roll(num: i32, die: i32) {
+    let mut rng = rand::thread_rng();
     println!("Rolling {}d{}:", num, die);
-    let mut roll = 0;
-    for i in 0..num{
-        let rolled: i32 = rng.gen_range(1..=die);
-        println!("Roll {}: {}",i+1, rolled);
-        roll+= rolled;
+    let mut total = 0;
+    for _ in 0..num {
+        let roll: i32 = rng.gen_range(1..=die);
+        println!("Rolled: {}", roll);
+        total += roll;
     }
-    println!("Total: {}", roll);
+    println!("Total: {}", total);
 }
 
 #[test]
 fn test_roll_command() {
     let mut rng = rand::thread_rng();
-    let mut cmd = Command::cargo_bin("notus").unwrap();
+    let mut cmd = StdCommand::cargo_bin("notus").unwrap();
     //randomize the roll
     let num = rng.gen_range(1..=6);
     let die = rng.gen_range(1..=20);
