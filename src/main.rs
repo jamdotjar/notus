@@ -1,9 +1,12 @@
 use std::path::PathBuf;
 use rand::Rng;
 use clap::{Parser, Subcommand};
-use std::process::Command; // Run programs
-use assert_cmd::prelude::*; // Add methods on commands
-use predicates::prelude::*; // Used for writing assertions
+use chrono::Utc;
+use std::hash::{Hash, Hasher, DefaultHasher};
+use serde::{Serialize, Deserialize};
+use serde_json;
+use predicates::str::contains;
+use assert_cmd::Command as StdCommand;
 use scan_fmt::scan_fmt;
 
 #[derive(Parser)]
@@ -23,9 +26,7 @@ enum Commands {
     Roll {
         #[arg()]
         input: String,
-    }
-
-},
+    },
     /// Note global comand
     Note {
         #[clap(short = 'n', long = "new")]
@@ -48,15 +49,16 @@ struct Note {
    name: String,
    path: PathBuf,
    note_type: NoteType,
-   tags: Vec<String>, 
-   ID: NoteID,
+   tags: Vec<String>,   
+   id: u32,
    content: String,
 }
 impl Note {
-    fn new(mut name: String,mut path: PathBuf, note_type: NoteType, tags: Vec<String>, notes: &mut Vec<NoteID>) -> Self {
+    fn new(mut name: String, mut path: PathBuf, note_type: NoteType, tags: Vec<String>, notes: &mut Vec<NoteID>) -> Self {
         let now = Utc::now().to_string();
         let content = String::new();
-        // Check if a file with the given path already exists
+        // Ensure the path is within the "notes" folder and has a .json extension
+        path = PathBuf::from("notes").join(path).with_extension("json");
         let mut counter = 1;
         let original_file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
         let oldname = name.clone();
@@ -68,21 +70,27 @@ impl Note {
             counter += 1;
         }
         let id = Note::generate_note_id(&name, &path);
-        notes.push(id.clone());
+        let noteid=NoteID{
+            name: name.clone(),
+            id,
+            path: path.clone(),
+        };
+        notes.push(noteid);
+
+        println!("{:?}", *notes);
         Self {
             name,
             path,
             note_type,
             tags,
             date: now,
-            ID: id,
+            id: id,
             content: content,
         }
      
     }
     fn save(&self){
       // Note { date: 2024-03-17T00:13:41.073965Z, name: "Hello", path: "Hello", note_type: Note, tags: [], ID: Id(258311098) }
-      
         // make dir if not there
         if let Some(dir) = self.path.parent() {
             if !dir.exists() {
@@ -96,11 +104,11 @@ impl Note {
         }
         print!("Created: {}", &self.name)
     }
-    fn generate_note_id(name: &String, path: &PathBuf) -> NoteID {
+    fn generate_note_id(name: &String, path: &PathBuf) -> u32 {
         let mut hasher = DefaultHasher::new();
         path.hash(&mut hasher);
         let hash = hasher.finish();
-        let id: NoteID = NoteID::Id(hash as u32);
+        let id = hash as u32;
         id
     }
 
@@ -112,17 +120,17 @@ enum NoteType {
     Character
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
-enum NoteID {
-    Name(String),
-    Id(u32),
-    Path(PathBuf)
+struct NoteID {
+    name: String,
+    id: u32,
+    path: PathBuf,
 }
 
 
 fn main() {
-//initalize cli and Random number generator
     let cli = Cli::parse();
-    let mut rng = rand::thread_rng();
+    let rng = rand::thread_rng();
+    let mut notes = Vec::new();
     if let Some(note) = cli.note {
         println!("{}", note);
     }
@@ -131,13 +139,24 @@ fn main() {
         Commands::Roll { input } => {
             let (num, die) = scan_fmt!(
                 input, "{}d{}", i32, i32).unwrap();
-            roll(num, die, &mut rng)
-        }
+            roll(num, die)
+        },
+        Commands::Note { new, active, edit, name, tags } => {
+            // Handle the Note command here
+            // For example, create a new note if the 'new' flag is true
+            if *new {
+                let note = Note::new(name.clone(), PathBuf::from(name), NoteType::Note, tags.split(',').map(String::from).collect(), &mut notes );
+                note.save(
+
+                );
+            }
+        },
         _ =>{ println!("you need to write something man") }
     }  
     }
    
 }  
+   
 
 fn roll(num: i32, die: i32) {
     let mut rng = rand::thread_rng();
@@ -161,5 +180,5 @@ fn test_roll_command() {
     cmd.arg("roll").arg(format!("{}d{}", num, die));
     cmd.assert()
        .success()
-       .stdout(predicate::str::contains(format!("Rolling {}d{}:", num, die)));
+       .stdout(predicates::str::contains(format!("Rolling {}d{}:", num, die)));
 }
