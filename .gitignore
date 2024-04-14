@@ -1,4 +1,7 @@
 /target
 .vscode
 .vscode/launch.json
-./notes
+/notes
+.conf
+DS_Store
+cargo.lock

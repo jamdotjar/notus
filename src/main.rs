@@ -1,10 +1,12 @@
 use std::path::PathBuf;
+use std::fs;
 use rand::Rng;
 use clap::{Parser, Subcommand};
 use std::process::Command; // Run programs
 use assert_cmd::prelude::*; // Add methods on commands
 use predicates::prelude::*; // Used for writing assertions
 use scan_fmt::scan_fmt;
+
 
 #[derive(Parser)]
 #[command(name = "notus", about="Notes for us", long_about = "A DND notes app with insane functionality (dungeon generation, dice rolling, markdown support, exporting)")]
@@ -112,17 +114,19 @@ enum NoteType {
     Character
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
-enum NoteID {
-    Name(String),
-    Id(u32),
-    Path(PathBuf)
+struct NoteID {  //noteID for notes array
+    name: String,
+    id: u32,
+    path: PathBuf,
 }
 
 
 fn main() {
 //initalize cli and Random number generator
     let cli = Cli::parse();
-    let mut rng = rand::thread_rng();
+    let rng = rand::thread_rng(); //setup cli and rng (for roll func)
+    let mut notes = load_notes_list();
+    println!("{:?}", notes);
     if let Some(note) = cli.note {
         println!("{}", note);
     }
@@ -131,14 +135,50 @@ fn main() {
         Commands::Roll { input } => {
             let (num, die) = scan_fmt!(
                 input, "{}d{}", i32, i32).unwrap();
-            roll(num, die, &mut rng)
-        }
+            roll(num, die)
+        },//example: notus roll 5d8
+        Commands::Note { new, active, edit, name, tags } => {
+            // Handle the Note command here
+            // For example, create a new note if the 'new' flag is true
+            if *new {
+                let note = Note::new(name.clone(), PathBuf::from(name), NoteType::Note, tags.split(',').map(String::from).collect(), &mut notes );
+                note.save(
+
+                );
+            }
+        },
         _ =>{ println!("you need to write something man") }
     }  
     }
-   
+   save_notes_list(&notes)
 }  
 
+fn save_notes_list(notes: &Vec<NoteID>){
+    let encoded: Vec<u8> = bincode::serialize(notes).unwrap();
+    if let Some(dir) = PathBuf::from(".conf/.notes").parent() { //create drectory if not present
+        if !dir.exists() { 
+            std::fs::create_dir_all(dir).unwrap();
+        }
+    }
+    fs::write(".conf/.notes", &encoded).expect("Couldnt save note data");
+    println!("{:?}", encoded);
+}
+
+fn load_notes_list() -> Vec<NoteID>{
+    let mut notes = Vec::new();
+    if let Some(dir) = PathBuf::from(".conf/.notes").parent() {
+        if !dir.exists() {
+            println!("No notes to load");
+            return(notes);
+        }
+    }
+    // Load notes from .conf/.notes
+    let path = PathBuf::from(".conf/.notes");
+    if let Ok(bytes) = fs::read(&path) {
+        notes = bincode::deserialize(&bytes).unwrap_or_else(|_| Vec::new());
+    }
+    notes
+}
 fn roll(num: i32, die: i32) {
     let mut rng = rand::thread_rng();
     println!("Rolling {}d{}:", num, die);
