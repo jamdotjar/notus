@@ -3,5 +3,5 @@
 .vscode/launch.json
 /notes
 .conf
-DS_Store
-cargo.lock
+.DS_Store
+Cargo.lock

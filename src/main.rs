@@ -1,11 +1,14 @@
 use std::path::PathBuf;
 use std::fs;
 use rand::Rng;
+use std::hash::{Hash, DefaultHasher, Hasher};
 use clap::{Parser, Subcommand};
 use std::process::Command; // Run programs
 use assert_cmd::prelude::*; // Add methods on commands
 use predicates::prelude::*; // Used for writing assertions
 use scan_fmt::scan_fmt;
+use chrono::Utc;
+use serde::{Serialize, Deserialize};
 
 
 #[derive(Parser)]
@@ -19,16 +22,16 @@ struct Cli {
 
 }
 
+//
 #[derive(Subcommand)]
 enum Commands {
     /// Rolls a die
     Roll {
         #[arg()]
         input: String,
-    }
+    },
 
-},
-    /// Note global comand
+    /// Note global comands
     Note {
         #[clap(short = 'n', long = "new")]
         new: bool,
@@ -51,24 +54,28 @@ struct Note {
    path: PathBuf,
    note_type: NoteType,
    tags: Vec<String>, 
-   ID: NoteID,
+   id : NoteID,
    content: String,
 }
 impl Note {
-    fn new(mut name: String,mut path: PathBuf, note_type: NoteType, tags: Vec<String>, notes: &mut Vec<NoteID>) -> Self {
+    fn new(mut name: String, mut path: PathBuf, note_type: NoteType, tags: Vec<String>, notes: &mut Vec<NoteID>) -> Self {
         let now = Utc::now().to_string();
         let content = String::new();
-        // Check if a file with the given path already exists
-        let mut counter = 1;
+
+        // REMEMBER THIS IF I EVER HAVE TO REWRITE
+        path = PathBuf::from("notes").join(path);
+
         let original_file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
-        let oldname = name.clone();
+        let mut counter = 0;
         while path.exists() {
-            
-            let new_path = path.with_file_name(format!("{}{}.json", original_file_stem, counter));
-            path = new_path;
-            name = oldname.clone()+&counter.to_string();
             counter += 1;
+            let new_file_name = format!("{}{}", original_file_stem, counter);
+            path.set_file_name(new_file_name);        // some stupid stuff to make sure all the files have a .json
         }
+        if counter > 0 {
+            name = format!("{}{}", original_file_stem, counter);
+        }
+        path.set_extension("json");//this is kinda maybe sorta important if i dont wanna go cray cray
         let id = Note::generate_note_id(&name, &path);
         notes.push(id.clone());
         Self {
@@ -77,14 +84,14 @@ impl Note {
             note_type,
             tags,
             date: now,
-            ID: id,
+            id: id,
             content: content,
         }
      
     }
     fn save(&self){
-      // Note { date: 2024-03-17T00:13:41.073965Z, name: "Hello", path: "Hello", note_type: Note, tags: [], ID: Id(258311098) }
-      
+      // Note { date: 2024-03-17T00:13:41.073965Z, name: "Hello", path: "Hello", note_type: Note, tags: [], id: Id(258311098) }
+        print!("{:?}", self.path);
         // make dir if not there
         if let Some(dir) = self.path.parent() {
             if !dir.exists() {
@@ -98,11 +105,12 @@ impl Note {
         }
         print!("Created: {}", &self.name)
     }
-    fn generate_note_id(name: &String, path: &PathBuf) -> NoteID {
+    fn generate_note_id(name: &String, path: &PathBuf) -> NoteID {//generates a NoteID object with a hash (from path, which is from name, i love this system)
         let mut hasher = DefaultHasher::new();
+        name.hash(&mut hasher);
         path.hash(&mut hasher);
         let hash = hasher.finish();
-        let id: NoteID = NoteID::Id(hash as u32);
+        let id = NoteID { name: name.clone(), id: hash as u32, path: path.clone() };
         id
     }
 
@@ -124,7 +132,6 @@ struct NoteID {  //noteID for notes array
 fn main() {
 //initalize cli and Random number generator
     let cli = Cli::parse();
-    let rng = rand::thread_rng(); //setup cli and rng (for roll func)
     let mut notes = load_notes_list();
     println!("{:?}", notes);
     if let Some(note) = cli.note {
@@ -142,9 +149,7 @@ fn main() {
             // For example, create a new note if the 'new' flag is true
             if *new {
                 let note = Note::new(name.clone(), PathBuf::from(name), NoteType::Note, tags.split(',').map(String::from).collect(), &mut notes );
-                note.save(
-
-                );
+                note.save();
             }
         },
         _ =>{ println!("you need to write something man") }
@@ -161,7 +166,6 @@ fn save_notes_list(notes: &Vec<NoteID>){
         }
     }
     fs::write(".conf/.notes", &encoded).expect("Couldnt save note data");
-    println!("{:?}", encoded);
 }
 
 fn load_notes_list() -> Vec<NoteID>{
@@ -179,7 +183,7 @@ fn load_notes_list() -> Vec<NoteID>{
     }
     notes
 }
-fn roll(num: i32, die: i32) {
+fn roll(num: i32, die: i32) {//roll command ( rolls xdx ) USAGE: notus roll 2d8
     let mut rng = rand::thread_rng();
     println!("Rolling {}d{}:", num, die);
     let mut total = 0;
@@ -190,16 +194,18 @@ fn roll(num: i32, die: i32) {
     }
     println!("Total: {}", total);
 }
-
+/* Tests, they can be ignored (they like to throw warnings) 
+Now that you are no longer paying attention, I can mention that the .notes in .conf is probably not the most efficinet datastorage
+*/
 #[test]
 fn test_roll_command() {
     let mut rng = rand::thread_rng();
-    let mut cmd = StdCommand::cargo_bin("notus").unwrap();
+    let mut cmd = Command::cargo_bin("notus").unwrap();
     //randomize the roll
     let num = rng.gen_range(1..=6);
     let die = rng.gen_range(1..=20);
     cmd.arg("roll").arg(format!("{}d{}", num, die));
     cmd.assert()
        .success()
-       .stdout(predicate::str::contains(format!("Rolling {}d{}:", num, die)));
+       .stdout(predicates::str::contains(format!("Rolling {}d{}:", num, die)));
 }
