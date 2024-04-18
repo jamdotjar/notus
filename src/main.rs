@@ -9,7 +9,7 @@ use predicates::prelude::*; // Used for writing assertions
 use scan_fmt::scan_fmt;
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
-
+use termimad::MadSkin; //I am fully convinced this is a send from the skies
 
 #[derive(Parser)]
 #[command(name = "notus", about="Notes for us", long_about = "A DND notes app with insane functionality (dungeon generation, dice rolling, markdown support, exporting)")]
@@ -37,13 +37,16 @@ enum Commands {
 }
 #[derive(Subcommand)]
 enum NoteAction {//handles differnet flags for different functions
-    #[clap(name="New", short_flag = 'n', long_flag = "new")]
+    #[clap(name="New", short_flag = 'n', long_flag = "new", about="Create a new note")]
     New {
         name: String,
         #[clap(short = 't', long = "tags")]
         tags: String,
     },
-    View,
+    #[clap(name="View", short_flag = 'v', long_flag = "view")]
+    View {
+        name: String,
+    },
     Active,
     Edit,
 }
@@ -93,7 +96,6 @@ impl Note {
     }
     fn save(&self){
       // Note { date: 2024-03-17T00:13:41.073965Z, name: "Hello", path: "Hello", note_type: Note, tags: [], id: Id(258311098) }
-        print!("{:?}", self.path);
         // make dir if not there
         if let Some(dir) = self.path.parent() {
             if !dir.exists() {
@@ -105,7 +107,7 @@ impl Note {
         if let Err(e) = std::fs::write(&self.path, &serialized) {
             eprintln!("Failed to write to file: {}", e);
         }
-        print!("Created: {}", &self.name)
+        println!("Created: {}", &self.name)
     }
     fn generate_note_id(name: &String, path: &PathBuf) -> NoteID {//generates a NoteID object with a hash (from path, which is from name, i love this system)
         let mut hasher = DefaultHasher::new();
@@ -135,7 +137,7 @@ fn main() {
 //initalize cli and Random number generator
     let cli = Cli::parse();
     let mut notes = load_notes_list();
-    println!("{:?}", notes);
+    //println!("{:?}", notes);
     match &cli.command {
         Commands::Roll { input } => {
             let (num, die) = scan_fmt!(input, "{}d{}", i32, i32).unwrap();
@@ -147,8 +149,13 @@ fn main() {
                     let note = Note::new(name.clone(), PathBuf::from(name), NoteType::Note, tags.split(',').map(String::from).collect(), &mut notes);
                     note.save();
                 },
-                NoteAction::View => {
-                //TODO: Viewer
+                NoteAction::View { name }=> {
+                    let mut skin = MadSkin::default();
+                    let index = notes.iter().position(|r| r.name.to_lowercase() == name.to_lowercase()).unwrap();//finds the note to read
+                    // println!("{:?}", notes[index]);
+                    let note = fs::read_to_string(&notes[index].path).unwrap();
+                    let deserialized: Note = serde_json::from_str(&note).unwrap();
+                    skin.print_text(&deserialized.content);
                 },
                 NoteAction::Active => {
                 //TODO: Note switching
