@@ -14,15 +14,13 @@ use serde::{Serialize, Deserialize};
 #[derive(Parser)]
 #[command(name = "notus", about="Notes for us", long_about = "A DND notes app with insane functionality (dungeon generation, dice rolling, markdown support, exporting)")]
 struct Cli {
-    #[arg( required = false)]    
-    note: Option<String>,
-
     #[command(subcommand)]
     command: Commands, 
 
+    #[arg( required = false)]    
+    note: Option<String>,
+ 
 }
-
-//
 #[derive(Subcommand)]
 enum Commands {
     /// Rolls a die
@@ -31,21 +29,25 @@ enum Commands {
         input: String,
     },
 
-    /// Note global comands
-    Note {
-        #[clap(short = 'n', long = "new")]
-        new: bool,
-        #[clap(short = 'a', long = "active")]
-        active: bool,
-        #[clap(short = 'e', long = "edit")]
-        edit: bool,
-        #[arg()]
-        name: String,
-        #[clap(short = 't', long = "tags")]
-        tags: String,
+    Note {//general note command
+        #[clap(subcommand)]
+        action: NoteAction, //passes to flag handler
     }
 
 }
+#[derive(Subcommand)]
+enum NoteAction {//handles differnet flags for different functions
+    #[clap(name="New", short_flag = 'n', long_flag = "new")]
+    New {
+        name: String,
+        #[clap(short = 't', long = "tags")]
+        tags: String,
+    },
+    View,
+    Active,
+    Edit,
+}
+
 
 #[derive(Serialize, Deserialize,  Debug)]
 struct Note {
@@ -114,7 +116,7 @@ impl Note {
         id
     }
 
-} 
+}
 #[derive(Debug, Serialize, Deserialize)]
 enum NoteType {
     Note,
@@ -134,28 +136,30 @@ fn main() {
     let cli = Cli::parse();
     let mut notes = load_notes_list();
     println!("{:?}", notes);
-    if let Some(note) = cli.note {
-        println!("{}", note);
-    }
-    else {
-       match &cli.command {
+    match &cli.command {
         Commands::Roll { input } => {
-            let (num, die) = scan_fmt!(
-                input, "{}d{}", i32, i32).unwrap();
-            roll(num, die)
-        },//example: notus roll 5d8
-        Commands::Note { new, active, edit, name, tags } => {
-            // Handle the Note command here
-            // For example, create a new note if the 'new' flag is true
-            if *new {
-                let note = Note::new(name.clone(), PathBuf::from(name), NoteType::Note, tags.split(',').map(String::from).collect(), &mut notes );
-                note.save();
-            }
+            let (num, die) = scan_fmt!(input, "{}d{}", i32, i32).unwrap();
+            roll(num, die);
         },
-        _ =>{ println!("you need to write something man") }
-    }  
+        Commands::Note { action } => {
+            match action {
+                NoteAction::New { name, tags } => {
+                    let note = Note::new(name.clone(), PathBuf::from(name), NoteType::Note, tags.split(',').map(String::from).collect(), &mut notes);
+                    note.save();
+                },
+                NoteAction::View => {
+                //TODO: Viewer
+                },
+                NoteAction::Active => {
+                //TODO: Note switching
+                },
+                NoteAction::Edit => {
+                //TODO: editing lol
+                },
+            }
+        }
     }
-   save_notes_list(&notes)
+   save_notes_list(&notes);
 }  
 
 fn save_notes_list(notes: &Vec<NoteID>){
