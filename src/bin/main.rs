@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, thread::AccessError};
 use std::fs;
 use rand::Rng;
 use std::hash::{Hash, DefaultHasher, Hasher};
@@ -19,7 +19,7 @@ struct Cli {
 
     #[arg( required = false)]    
     note: Option<String>,
- 
+    
 }
 #[derive(Subcommand)]
 enum Commands {
@@ -32,6 +32,12 @@ enum Commands {
     Note {//general note command
         #[clap(subcommand)]
         action: NoteAction, //passes to flag handler
+    },
+
+   #[clap(short_flag='t', long_flag= "quick")]
+    Quick {
+        #[arg()]
+        input: String,
     }
 
 }
@@ -47,8 +53,13 @@ enum NoteAction {//handles differnet flags for different functions
     View {
         name: String,
     },
-    Active,
+    #[clap(name="Active", short_flag = 'a', long_flag = "active")]
+    Active {
+        name: String,
+    },
     Edit,
+    #[clap(name="Reset", short_flag= 'r', long_flag = "reset")]
+    Reset, 
 }
 
 
@@ -63,37 +74,37 @@ struct Note {
    content: String,
 }
 impl Note {
-    fn new(mut name: String, mut path: PathBuf, note_type: NoteType, tags: Vec<String>, notes: &mut Vec<NoteID>) -> Self {
-        let now = Utc::now().to_string();
-        let content = String::new();
+   fn new(mut name: String, mut path: PathBuf, note_type: NoteType, tags: Vec<String>, notes: &mut Vec<NoteID>) -> Self {
+    let now = Utc::now().to_string();
+    let content = String::new();
+    // Ensure the base directory is 'notes/'
+    path = PathBuf::from("notes").join(&path);
+    path.set_extension("json");  // Set the extension before the loop
+    let original_file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
+    let mut counter = 0;
+    while path.exists() {
+        counter += 1;
+        let new_file_name = format!("{}{}.json", original_file_stem, counter);
 
-        // REMEMBER THIS IF I EVER HAVE TO REWRITE
-        path = PathBuf::from("notes").join(path);
+        path = PathBuf::from("notes").join(&new_file_name);
 
-        let original_file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
-        let mut counter = 0;
-        while path.exists() {
-            counter += 1;
-            let new_file_name = format!("{}{}", original_file_stem, counter);
-            path.set_file_name(new_file_name);        // some stupid stuff to make sure all the files have a .json
-        }
-        if counter > 0 {
-            name = format!("{}{}", original_file_stem, counter);
-        }
-        path.set_extension("json");//this is kinda maybe sorta important if i dont wanna go cray cray
-        let id = Note::generate_note_id(&name, &path);
-        notes.push(id.clone());
-        Self {
-            name,
-            path,
-            note_type,
-            tags,
-            date: now,
-            id: id,
-            content: content,
-        }
-     
     }
+    if counter > 0 {
+        name = format!("{}{}", original_file_stem, counter);
+    }
+    let id = Note::generate_note_id(&name, &path);
+    notes.push(id.clone());
+    set_active_note(notes, &id.name);
+    Self {
+        name,
+        path,
+        note_type,
+        tags,
+        date: now,
+        id: id,
+        content: content,
+    }
+}
     fn save(&self){
       // Note { date: 2024-03-17T00:13:41.073965Z, name: "Hello", path: "Hello", note_type: Note, tags: [], id: Id(258311098) }
         // make dir if not there
@@ -114,9 +125,11 @@ impl Note {
         name.hash(&mut hasher);
         path.hash(&mut hasher);
         let hash = hasher.finish();
-        let id = NoteID { name: name.clone(), id: hash as u32, path: path.clone() };
+        let id = NoteID { name: name.clone(), id: hash as u32, path: path.clone(), active: true};
         id
     }
+    
+      
 
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -130,38 +143,81 @@ struct NoteID {  //noteID for notes array
     name: String,
     id: u32,
     path: PathBuf,
+    active: bool,
 }
 
+fn set_active_note(notes: &mut Vec<NoteID>, active_note_name: &str) {
+    for note in notes.iter_mut() {
+        note.active = note.name == active_note_name;
+    }
+}
 
 fn main() {
 //initalize cli and Random number generator
     let cli = Cli::parse();
     let mut notes = load_notes_list();
+    let mut active: Option<NoteID> = notes.iter().find(|n| n.active).cloned();
+
     //println!("{:?}", notes);
     match &cli.command {
         Commands::Roll { input } => {
             let (num, die) = scan_fmt!(input, "{}d{}", i32, i32).unwrap();
             roll(num, die);
         },
+        Commands::Quick { input} => {
+            let path = active.unwrap().path.clone();
+            let data = fs::read_to_string(&path).expect("Unable to read file");
+            let mut note: Note = serde_json::from_str(&data).expect("Error parsing JSON");
+            note.content += input;
+            note.save();
+            println!("Note updated and saved successfully.");
+        },
         Commands::Note { action } => {
             match action {
                 NoteAction::New { name, tags } => {
                     let note = Note::new(name.clone(), PathBuf::from(name), NoteType::Note, tags.split(',').map(String::from).collect(), &mut notes);
                     note.save();
+                    println!("{:?}", notes);
                 },
                 NoteAction::View { name }=> {
                     let mut skin = MadSkin::default();
-                    let index = notes.iter().position(|r| r.name.to_lowercase() == name.to_lowercase()).unwrap();//finds the note to read
+                    let index = &notes.iter().position(|r| r.name.to_lowercase() == name.to_lowercase()).unwrap();//finds the note to read
                     // println!("{:?}", notes[index]);
-                    let note = fs::read_to_string(&notes[index].path).unwrap();
+                    let note = fs::read_to_string(&notes[*index].path).unwrap();
                     let deserialized: Note = serde_json::from_str(&note).unwrap();
                     skin.print_text(&deserialized.content);
                 },
-                NoteAction::Active => {
-                //TODO: Note switching
+                NoteAction::Active { name }=> {
+                    set_active_note(&mut notes, name);
+                    println!("Active note set to {}", name)
                 },
                 NoteAction::Edit => {
-                //TODO: editing lol
+//
+                 },
+                NoteAction::Reset => {
+                    let notes_path = PathBuf::from("notes");
+                    if notes_path.exists() && notes_path.is_dir() {
+                        let entries = std::fs::read_dir(&notes_path).expect("Failed to read contents");
+                        for entry in entries {
+                            let entry = entry.expect("Failed to read entry");
+                            let path = entry.path();
+                            if path.is_file() { 
+                                std::fs::remove_file(&path).expect("Failed to delete a file");
+                            }
+                        }
+                    } else {
+                        println!("Notes directory does not exist or is not a directory.");
+                    }
+
+                    let conf_notes_path = PathBuf::from(".conf/.notes");
+                    println!("Absolute path for .conf/.notes file: {:?}", std::fs::canonicalize(&conf_notes_path).unwrap());
+                    if conf_notes_path.exists() && conf_notes_path.is_file() {
+                        std::fs::remove_file(&conf_notes_path);
+
+                    } else {
+                        println!("The .conf/.notes does not exist or is not a file.");
+                    }
+                    return;
                 },
             }
         }
