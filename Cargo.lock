@@ -489,6 +489,7 @@ dependencies = [
  "bincode",
  "chrono",
  "clap",
+ "crossterm",
  "predicates",
  "rand",
  "scan_fmt",
