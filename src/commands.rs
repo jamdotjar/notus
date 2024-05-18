@@ -54,7 +54,6 @@ pub fn handle_note(action: NoteAction, notes: &mut Vec<NoteID>) {
             let note = fs::read_to_string(&notes[*index].path).unwrap();
             let deserialized: Note = serde_json::from_str(&note).unwrap();
             display(skin, &deserialized.content);
-            
         },
         NoteAction::Active { name }=> {
             notes::set_active_note(notes, &name);
@@ -99,9 +98,8 @@ pub fn handle_note(action: NoteAction, notes: &mut Vec<NoteID>) {
 fn make_skin() -> MadSkin {
     let mut skin = MadSkin::default();
     skin.table.align = termimad::Alignment::Center;
-    skin.set_headers_fg(AnsiValue(178));
-    skin.bold.set_fg(Yellow);
-    skin.italic.set_fg(Magenta);
+    skin.set_headers_fg(AnsiValue(124));
+    skin.italic.set_fg(Grey);
     skin.scrollbar.thumb.set_fg(AnsiValue(178));
     skin.code_block.align = termimad::Alignment::Center;
     skin

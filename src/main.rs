@@ -9,7 +9,7 @@ use assert_cmd::prelude::*; // Add methods on commands
 use predicates::prelude::*; // Used for writing assertions
 use scan_fmt::scan_fmt;
 use chrono::Utc;
-
+use crate::notes::Note;
 
 mod notes;
 mod cli;
