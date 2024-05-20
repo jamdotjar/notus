@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::hash::{Hash, DefaultHasher, Hasher};
 use chrono::Utc;
 use std::fs;
-
+use std::fmt;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Note {
    date: String,
@@ -99,6 +99,11 @@ pub struct NoteID {
 impl NoteID {
     pub fn get_path(&self) -> &PathBuf {
         &self.path
+    }
+}
+impl fmt::Display for NoteID {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name) // Assuming NoteID has a single field that implements Display
     }
 }
 pub fn set_active_note(notes: &mut Vec<NoteID>, active_note_name: &str) {

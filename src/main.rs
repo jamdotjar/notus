@@ -1,41 +1,62 @@
 use std::{path::PathBuf, thread::AccessError};
 use std::fs;
-use commands::{handle_note, handle_quicknote, handle_roll};
+
 use rand::Rng;
 use std::hash::{Hash, DefaultHasher, Hasher};
-use clap::{Parser, Subcommand};
 use std::process::Command; // Run programs
 use assert_cmd::prelude::*; // Add methods on commands
 use predicates::prelude::*; // Used for writing assertions
 use scan_fmt::scan_fmt;
 use chrono::Utc;
 use crate::notes::Note;
-
+use cursive::views::{BoxedView, Dialog, Button, LinearLayout, TextView, SelectView, ResizedView};
+use cursive::traits::*;
+use cursive::Cursive;
 mod notes;
 mod cli;
 mod commands;
+use cursive::immut1;
 
 use cli::{Cli, Commands, NoteAction};
 use notes::{save_notes_list, NoteID};
+use commands::{create_note_screen, delete_note, select_note};
 
 fn main() {
-//initalize cli and Random number generator
-    let cli = Cli::parse();
     let mut notes = load_notes_list();
     let mut active: Option<NoteID> = notes.iter().find(|n| n.active).cloned();
+    
+    let mut siv = cursive::default();
+    siv.set_user_data(notes.clone());
+    let mut notelist = SelectView::<String>::new().on_submit(|s, item| select_note(s, item)).with_name("notes");
+    siv.add_layer(
+        Dialog::around(
+            LinearLayout::horizontal()
+                .child(ResizedView::with_min_size((20, 5), notelist))
+                .child(
+                    LinearLayout::vertical()
+                        .child(TextView::new("Options:"))
+                        .child(Button::new("New note", move |s: &mut Cursive| {
+                            create_note_screen(s)
+                        })).child(Button::new("Quit", |s| s.quit()))
+                )
+        )
+        .title("NotUS")
+    );
 
-    //println!("{:?}", notes);
-    match cli.command {
-        Commands::Roll { input } => {
-            handle_roll(&input);
-        },
-        Commands::Quick { input} => {
-            handle_quicknote(&input, &active.unwrap())
-        },
-        Commands::Note { action } => {
-            handle_note(action, &mut notes)
-        }
-    }
+    let notes_clone = notes.clone();
+    let cb_sink = siv.cb_sink().clone();
+    siv.with_user_data(move |notes: &mut Vec<NoteID>| {
+        let notes = notes_clone.clone();
+        cb_sink.send(Box::new(move |s| {
+            s.call_on_name("notes", |view: &mut SelectView<String>| {
+                for note in notes.iter() {
+                    view.add_item_str(&note.name);
+                }
+            });
+        })).unwrap();
+    });
+    siv.run();
+
 }  
 
 fn load_notes_list() -> Vec<NoteID>{

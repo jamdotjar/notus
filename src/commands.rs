@@ -2,6 +2,7 @@
 use crate::{cli::NoteAction, notes::{Note, NoteID}};
 use std::fs;
 
+use clap::builder::Str;
 use serde_json;
 use rand::Rng;
 use scan_fmt::scan_fmt;
@@ -18,7 +19,10 @@ use crossterm::{
 };
 use std::io::{stdout, Write};
 use crossterm::style::Color::AnsiValue;
-
+use cursive::{menu::Item, Cursive};
+use cursive::views::*;
+use cursive::views::SelectView;
+use cursive::traits::*;
 pub fn handle_quicknote(input: &str, active_note: &NoteID) {
     let path = active_note.get_path().clone();
     let data = fs::read_to_string(&path).expect("Unable to read file");
@@ -40,7 +44,50 @@ pub fn handle_roll(input: &str) {
     }
     println!("Total: {}", total);
 }
-pub fn handle_note(action: NoteAction, notes: &mut Vec<NoteID>) {
+pub fn select_note(s: &mut Cursive, item: &str) {
+    let item_clone = item.to_string();
+    let dialog = Dialog::text(item)
+    .title("Note Options")
+        .button("Exit",  |s| { s.pop_layer();  })
+        .button("Delete", move |s| delete_note(s, &item_clone));
+    s.add_layer(dialog);
+}
+
+pub fn delete_note(s: &mut Cursive, item: &str){
+    
+    s.call_on_name("notes", |view: &mut SelectView<String>| {
+        let index = view.iter().position(|(label, _)| label == item);
+        if let Some(index) = index {
+            view.remove_item(index);
+        }
+    });
+    s.pop_layer();  
+}
+    
+pub fn create_note_screen(s: &mut Cursive) {
+    s.add_layer(
+        Dialog::new()
+            .title("Enter a new name")
+            .content(EditView::new().with_name("name").fixed_width(10))
+            .button("Ok", |s| {
+                let name = s.call_on_name("name", |v: &mut EditView| v.get_content()).unwrap();
+                s.with_user_data(|notes: &mut Vec<NoteID>| {
+                    let note = Note::new(name.to_string(), PathBuf::from(&*name), NoteType::Note, Vec::new(), notes);
+                    note.save();
+
+                    save_notes_list(notes);
+                });
+                s.call_on_name("notes", |view: &mut SelectView<String>| {
+                    view.add_item_str(&*name);
+                });
+                s.pop_layer();
+            })
+            .button("Cancel", |s| {
+                s.pop_layer();
+            })
+    );
+}
+pub fn handle_note(action: NoteAction, notes: &mut Vec<NoteID>, s: &mut Cursive) {
     match action {
         NoteAction::New { name, tags } => {
             let note = Note::new(name.clone(), PathBuf::from(name), NoteType::Note, tags.split(',').map(String::from).collect(), notes);
@@ -50,10 +97,10 @@ pub fn handle_note(action: NoteAction, notes: &mut Vec<NoteID>) {
         },
         NoteAction::View { name }=> {
             let skin = make_skin();
-            let index = &notes.iter().position(|r| r.name.to_lowercase() == name.to_lowercase()).unwrap();//finds the note to read
+            let index  = &notes.iter().position(|r| r.name.to_lowercase() == name.to_lowercase()).unwrap();//finds the note to read
             let note = fs::read_to_string(&notes[*index].path).unwrap();
             let deserialized: Note = serde_json::from_str(&note).unwrap();
-            display(skin, &deserialized.content);
+
         },
         NoteAction::Active { name }=> {
             notes::set_active_note(notes, &name);
