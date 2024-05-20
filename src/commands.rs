@@ -52,16 +52,28 @@ pub fn select_note(s: &mut Cursive, item: &str) {
         .button("Delete", move |s| delete_note(s, &item_clone));
     s.add_layer(dialog);
 }
-
-pub fn delete_note(s: &mut Cursive, item: &str){
-    
+pub fn delete_note(s: &mut Cursive, item: &str) {
     s.call_on_name("notes", |view: &mut SelectView<String>| {
         let index = view.iter().position(|(label, _)| label == item);
         if let Some(index) = index {
             view.remove_item(index);
         }
     });
-    s.pop_layer();  
+
+    if let Some(index) = s.with_user_data(|note_list: &mut Vec<NoteID>| {
+        note_list.iter().position(|n| n.name == item)
+    }) {
+        s.with_user_data(|note_list: &mut Vec<NoteID>| {
+            let note = note_list.remove(index.unwrap());
+            if let Err(e) = std::fs::remove_file(&note.path) {
+                eprintln!("Failed to delete note file: {}", e);
+            }
+            print!("{:?}", note_list);
+            save_notes_list(note_list); 
+        });
+    }
+
+    s.pop_layer();
 }
     
 pub fn create_note_screen(s: &mut Cursive) {

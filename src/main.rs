@@ -22,11 +22,11 @@ use notes::{save_notes_list, NoteID};
 use commands::{create_note_screen, delete_note, select_note};
 
 fn main() {
-    let mut notes = load_notes_list();
-    let mut active: Option<NoteID> = notes.iter().find(|n| n.active).cloned();
+    let mut notes_list = load_notes_list();
+    let mut active: Option<NoteID> = notes_list.iter().find(|n| n.active).cloned();
     
     let mut siv = cursive::default();
-    siv.set_user_data(notes.clone());
+    siv.set_user_data(notes_list.clone());
     let mut notelist = SelectView::<String>::new().on_submit(|s, item| select_note(s, item)).with_name("notes");
     siv.add_layer(
         Dialog::around(
@@ -43,7 +43,7 @@ fn main() {
         .title("NotUS")
     );
 
-    let notes_clone = notes.clone();
+    let notes_clone = notes_list.clone();
     let cb_sink = siv.cb_sink().clone();
     siv.with_user_data(move |notes: &mut Vec<NoteID>| {
         let notes = notes_clone.clone();
@@ -56,7 +56,7 @@ fn main() {
         })).unwrap();
     });
     siv.run();
-
+    save_notes_list(&notes_list)
 }  
 
 fn load_notes_list() -> Vec<NoteID>{
