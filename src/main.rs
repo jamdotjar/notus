@@ -1,37 +1,65 @@
-use std::{path::PathBuf, thread::AccessError};
-use std::fs;
-
-use rand::Rng;
-use std::hash::{Hash, DefaultHasher, Hasher};
+use std::{fs, path::PathBuf, thread::AccessError};
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::process::Command; // Run programs
+
 use assert_cmd::prelude::*; // Add methods on commands
-use predicates::prelude::*; // Used for writing assertions
-use scan_fmt::scan_fmt;
 use chrono::Utc;
-use crate::notes::Note;
-use cursive::views::{BoxedView, Dialog, Button, LinearLayout, TextView, SelectView, ResizedView};
 use cursive::traits::*;
+use cursive::traits::With;
+use cursive::theme::{self, BorderStyle, Palette, PaletteColor::Highlight, PaletteColor::HighlightInactive};
+use cursive::views::{BoxedView, Button, Dialog, DummyView, EditView, LinearLayout, ResizedView, SelectView, TextView};
 use cursive::Cursive;
-mod notes;
+use predicates::prelude::*; // Used for writing assertions
+use rand::Rng;
+use scan_fmt::scan_fmt;
+
+use crate::notes::Note;
+use cli::{Cli, Commands, NoteAction};
+use commands::{create_note_screen, delete_note, select_note};
+use notes::{save_notes_list, NoteID};
+
 mod cli;
 mod commands;
-use cursive::immut1;
-
-use cli::{Cli, Commands, NoteAction};
-use notes::{save_notes_list, NoteID};
-use commands::{create_note_screen, delete_note, select_note};
-
+mod notes;
 fn main() {
     let mut notes_list = load_notes_list();
     let mut active: Option<NoteID> = notes_list.iter().find(|n| n.active).cloned();
     
     let mut siv = cursive::default();
+    siv.set_theme(cursive::theme::Theme {
+        shadow: false,
+        borders: BorderStyle::Simple,
+        palette: Palette::retro().with(|palette| {
+            use cursive::theme::BaseColor::*;
+            {
+                
+                use cursive::theme::Color::TerminalDefault;
+                use cursive::theme::PaletteColor::*;
+
+                palette[Background] = TerminalDefault;
+                palette[View] = TerminalDefault;
+                palette[Primary] = White.dark();
+                palette[TitlePrimary] = Red.light();
+                palette[Secondary] = Red.light();
+                palette[Highlight] = Red.dark();
+
+            }
+            {
+                use cursive::theme::Effect::*;
+                use cursive::theme::Style;
+
+                palette[Highlight] = Red.light();
+                palette[HighlightInactive] = Yellow.dark();
+            }
+        }),
+    });
     siv.set_user_data(notes_list.clone());
-    let mut notelist = SelectView::<String>::new().on_submit(|s, item| select_note(s, item)).with_name("notes");
+    let mut notelist = SelectView::<String>::new().on_submit(|s, item| select_note(s, item)).with_name("notes").min_size((20, 5)).scrollable();
     siv.add_layer(
         Dialog::around(
             LinearLayout::horizontal()
-                .child(ResizedView::with_min_size((20, 5), notelist))
+                .child(notelist)
+                .child(DummyView)
                 .child(
                     LinearLayout::vertical()
                         .child(TextView::new("Options:"))
@@ -56,7 +84,7 @@ fn main() {
         })).unwrap();
     });
     siv.run();
-    save_notes_list(&notes_list)
+
 }  
 
 fn load_notes_list() -> Vec<NoteID>{
