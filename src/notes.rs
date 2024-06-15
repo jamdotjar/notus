@@ -27,8 +27,7 @@ impl Note {
         while path.exists() {
             counter += 1;
             let new_file_name = format!("{}{}.json", original_file_stem, counter);
-            path = PathBuf::from("notes").join(&new_file_name);
-        }
+            path = PathBuf::from("notes").join(&new_file_name); }
         if counter > 0 {
             name = format!("{}{}", original_file_stem, counter);
         }
