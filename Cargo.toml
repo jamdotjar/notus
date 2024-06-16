@@ -17,4 +17,14 @@ serde_json = '1.0'
 bincode = "1.3.3"
 termimad = "0.29"
 crossterm = "0.27.0"
-cursive = "0.20.0"
+[dependencies.cursive]
+version = "0.20.0"
+default-features = false
+
+[features]
+default = ["ncurses-backend"]
+ncurses-backend = ["cursive/ncurses-backend"]
+pancurses-backend = ["cursive/pancurses-backend"]
+termion-backend = ["cursive/termion-backend"]
+crossterm-backend = ["cursive/crossterm-backend"]
+blt-backend = ["cursive/blt-backend"]

@@ -14,7 +14,7 @@ use rand::Rng;
 use scan_fmt::scan_fmt;
 
 use crate::notes::Note;
-use cli::{Cli, Commands, NoteAction};
+
 use commands::{create_note_screen, delete_note, select_note};
 use notes::{save_notes_list, NoteID};
 
@@ -29,29 +29,8 @@ fn main() {
     siv.set_theme(cursive::theme::Theme {
         shadow: false,
         borders: BorderStyle::Simple,
-        palette: Palette::retro().with(|palette| {
-            use cursive::theme::BaseColor::*;
-            {
-                
-                use cursive::theme::Color::TerminalDefault;
-                use cursive::theme::PaletteColor::*;
-
-                palette[Background] = TerminalDefault;
-                palette[View] = TerminalDefault;
-                palette[Primary] = White.dark();
-                palette[TitlePrimary] = Red.light();
-                palette[Secondary] = Red.light();
-                palette[Highlight] = Red.dark();
-
-            }
-            {
-                use cursive::theme::Effect::*;
-                use cursive::theme::Style;
-
-                palette[Highlight] = Red.light();
-                palette[HighlightInactive] = Yellow.dark();
-            }
-        }),
+        palette: Palette::retro()
+            
     });
     siv.set_user_data(notes_list.clone());
     let mut notelist = SelectView::<String>::new().on_submit(|s, item| select_note(s, item)).with_name("notes").min_size((20, 5)).scrollable();
