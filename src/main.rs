@@ -1,20 +1,13 @@
 use std::{fs, path::PathBuf};
 
 use cursive::traits::*;
-use cursive::traits::With;
-use cursive::theme::{ BorderStyle, Palette, PaletteColor::Highlight, PaletteColor::HighlightInactive};
+use crate::commands::create_note_screen;
 use cursive::views::{ Button, Dialog, DummyView, LinearLayout, SelectView, TextView};
 use cursive::Cursive;
-use predicates::prelude::*; // Used for writing assertions
-use rand::Rng;
-use scan_fmt::scan_fmt;
 
-use crate::notes::Note;
+use notes::NoteID;
 
-use commands::{create_note_screen, delete_note, select_note};
-use notes::{save_notes_list, NoteID};
 
-mod cli;
 mod commands;
 mod notes;
 
@@ -36,8 +29,9 @@ fn main() {
     siv.add_layer(
         Dialog::around(
             LinearLayout::horizontal()
-                .child(notelist)
-                .child(DummyView)
+                .child(
+                    notelist.full_width()
+                ) .child(TextView::new("│││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││").full_height().fixed_width(1))
                 .child(
                     LinearLayout::vertical()
                         .child(TextView::new("Options:"))
@@ -47,6 +41,9 @@ fn main() {
                 )
         )
         .title("NotUS")
+        .min_size((60, 15))
+        .max_size((80, 25))
+
     );
 
     siv.add_global_callback(cursive::event::Key::Esc, |s| { s.pop_layer(); });
@@ -74,9 +71,9 @@ fn select_note(s: &mut Cursive, item: &str) {
     let item_clone_view = item.to_string();  
     let dialog = Dialog::text(item)
        
-        .button("Edit", move |s| commands::edit_note(s, &item_clone_edit))
-        .button("Delete", move |s| commands::delete_note(s, &item_clone_delete))
-        .button("View", move |s| commands::view_note(s, &item_clone_view);
+        .button("Open", move |s| commands::view_note(s, &item_clone_view))
+        .button("Delete", move |s| commands::delete_note(s, &item_clone_delete));
+      
     s.add_layer(dialog);
 }
 fn load_notes_list() -> Vec<NoteID>{
