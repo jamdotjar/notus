@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::hash::{Hash, DefaultHasher, Hasher};
 use chrono::Utc;
 use std::fs;
-
+use std::fmt;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Note {
    date: String,
@@ -27,8 +27,7 @@ impl Note {
         while path.exists() {
             counter += 1;
             let new_file_name = format!("{}{}.json", original_file_stem, counter);
-            path = PathBuf::from("notes").join(&new_file_name);
-        }
+            path = PathBuf::from("notes").join(&new_file_name); }
         if counter > 0 {
             name = format!("{}{}", original_file_stem, counter);
         }
@@ -99,6 +98,11 @@ pub struct NoteID {
 impl NoteID {
     pub fn get_path(&self) -> &PathBuf {
         &self.path
+    }
+}
+impl fmt::Display for NoteID {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name) // Assuming NoteID has a single field that implements Display
     }
 }
 pub fn set_active_note(notes: &mut Vec<NoteID>, active_note_name: &str) {

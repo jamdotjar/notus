@@ -5,9 +5,16 @@ Notus is a command-line interface (CLI) application for markdown note-taking. It
 ## Features
 
 ## Features Checklist
+
 - [x] **Dice Rolling**: Roll dice with commands like `notus roll 5d8` 🎲.
 
-- [x] **Note Management**: Create, edit, and manage notes with tags and metadata 📝.
+- [ ] **Note Management**: Create, edit, and manage notes 📝.
+- - [x] Create
+- - [x] View
+- - [x] Management
+- - - [x] Delete
+- - - [] Rename
+- - [ ] edit
 
 - [ ] **Dungeon Generation**: Generate dungeons and export them for use in VTT 🏰.
 
