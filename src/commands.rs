@@ -2,10 +2,10 @@ use crate::notes::{save_notes_list, Note, NoteID, NoteType};
 use cursive::{traits::*, views::*, Cursive};
 use cursive::utils::markup::markdown;
 use rand::Rng;
-
+use cursive::theme::{BaseColor, Color, PaletteColor, Theme};
 use std::fs;
 use std::path::PathBuf;
-
+use cursive::views::ThemedView;
 
 #[allow(dead_code)]
 // TODO: use this somewhere
@@ -60,7 +60,7 @@ pub fn view_note(s: &mut Cursive, item: &str){
 
         s.add_layer(Dialog::new()
 .content(
-            TextView::new(markdown::parse(note_content))
+            ScrollView::new(TextView::new(markdown::parse(note_content)))
         ).button("Edit", {
             let item = item.to_string();
             move |s| {
@@ -90,14 +90,17 @@ pub fn edit_note(s: &mut Cursive, item: &str) {
             .replace("\\n", "\n");
         let item_01 = item.to_string();
         let item_02 = item.to_string();
+        let custom_theme = cursive::theme::Theme::retro();
         s.add_layer(
             Dialog::new()
-                .content(
+            .content(
+                ThemedView::new(
+                    custom_theme,
                     TextArea::new()
                         .content(note_content)
                         .with_name("edit_content")
-                     
                 )
+            )
                 .button("Save", move |s| {
                     let text = s
                         .call_on_name("edit_content", |view: &mut TextArea| {

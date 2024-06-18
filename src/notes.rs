@@ -110,3 +110,6 @@ pub fn set_active_note(notes: &mut Vec<NoteID>, active_note_name: &str) {
         note.active = note.name == active_note_name;
     }
 }
+pub fn export(){
+    
+}

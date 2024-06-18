@@ -1,12 +1,12 @@
 mod commands;
 mod notes;
-
+use notes::export;
 use std::{fs, path::PathBuf};
 use cursive::traits::*;
 use commands::create_note;
 use cursive::views::{ Button, Dialog, LinearLayout, SelectView, TextView};
 use cursive::Cursive;
-use cursive::theme::{BorderStyle, Palette};
+use cursive::theme::{BorderStyle, Palette, PaletteColor, Color, BaseColor, Theme};
 use notes::NoteID;
 
 fn main() {
@@ -14,12 +14,15 @@ fn main() {
     let notes_list = load_notes_list();   
     let mut siv = cursive::default();
    
-    
-     siv.set_theme(cursive::theme::Theme {
+    let mut palette = Palette::terminal_default();
+    palette[PaletteColor::Background] = Color::Dark(BaseColor::Black);
+    palette[PaletteColor::View] = Color::Dark(BaseColor::Black);
+    palette[PaletteColor::Primary] = Color::Light(BaseColor::White);
+
+    siv.set_theme(Theme {
         shadow: false,
         borders: BorderStyle::Simple,
-        palette: Palette::retro()
-            
+        palette,
     });
     siv.set_user_data(notes_list.clone());
     let notelist = SelectView::<String>::new().on_submit(|s, item| select_note(s, item)).with_name("notes").min_size((20, 5)).scrollable();
@@ -71,7 +74,8 @@ fn select_note(s: &mut Cursive, item: &str) {
     let dialog = Dialog::text(item)
        
         .button("Open", move |s| {s.pop_layer(); commands::view_note(s, &item_clone_view)})
-        .button("Delete", move |s| commands::delete_note(s, &item_clone_delete));
+        .button("Delete", move |s| commands::delete_note(s, &item_clone_delete))
+        .button("Export", move |s| notes::export());
 
     s.add_layer(dialog);
 }
