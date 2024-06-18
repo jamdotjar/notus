@@ -1,5 +1,4 @@
 use crate::notes::{save_notes_list, Note, NoteID, NoteType};
-use cursive::theme::Theme;
 use cursive::{traits::*, views::*, Cursive};
 use cursive::utils::markup::markdown;
 use rand::Rng;
@@ -43,10 +42,11 @@ pub fn delete_note(s: &mut Cursive, item: &str) {
             save_notes_list(note_list);
         });
     }
-
     s.pop_layer();
 }
 pub fn view_note(s: &mut Cursive, item: &str){
+
+            
     let note = s.with_user_data(|note_list: &mut Vec<NoteID>| {
         note_list.iter().find(|n| n.name == item).cloned()
     });
@@ -65,9 +65,13 @@ pub fn view_note(s: &mut Cursive, item: &str){
             let item = item.to_string();
             move |s| {
                 s.pop_layer();
+                
                 edit_note(s, &item);
             }
-        }).fixed_size((70, 20)));
+        }).button( "Close", move |s| {
+            s.pop_layer();
+        }
+        ).fixed_size((70, 20)));
     }
     
     
@@ -84,7 +88,8 @@ pub fn edit_note(s: &mut Cursive, item: &str) {
             .expect("Failed to deserialize content")
             .content
             .replace("\\n", "\n");
-        
+        let item_01 = item.to_string();
+        let item_02 = item.to_string();
         s.add_layer(
             Dialog::new()
                 .content(
@@ -104,21 +109,24 @@ pub fn edit_note(s: &mut Cursive, item: &str) {
                     note_content.content = text.clone();
                     let serialized = serde_json::to_string_pretty(&note_content)
                         .expect("Content didnt serialize");
-
+                       
+                   
                     fs::write(&path, serialized).expect("Could not save note");
                     fs::write("console.txt", text.clone()).expect("Failed to write to file");
-                    
                     s.pop_layer();
+                    view_note(s, &item_01);
                 })
-                .button("Cancel", |s| {
+                .button("Cancel", move |s| {
                     s.pop_layer();
+                    view_note(s, &item_02);
                 }).fixed_size((70, 22)),
         );
+
     } else {
         s.add_layer(Dialog::info("Note file not found."));
     }
 }
-pub fn create_note_screen(s: &mut Cursive) {
+pub fn create_note(s: &mut Cursive) {
     s.add_layer(
         Dialog::new()
             .title("Enter a new name")
@@ -142,13 +150,11 @@ pub fn create_note_screen(s: &mut Cursive) {
                     view.add_item_str(&*name);
                 });
                 s.pop_layer();
+                edit_note(s, &name)
             })
             .button("Cancel", |s| {
                 s.pop_layer();
             }),
     );
 }
-fn editor_theme() -> Theme {
-    let theme = Theme::default();
-    theme
-}
+

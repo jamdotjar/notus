@@ -24,7 +24,7 @@ features = ["markdown"]
 
 [features]
 
-default = ["ncurses-backend", "cursive/markdown"]
+default = ["pancurses-backend", "cursive/markdown"]
 ncurses-backend = ["cursive/ncurses-backend"]
 pancurses-backend = ["cursive/pancurses-backend"]
 termion-backend = ["cursive/termion-backend"]
