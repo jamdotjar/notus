@@ -4,6 +4,8 @@ use std::hash::{Hash, DefaultHasher, Hasher};
 use chrono::Utc;
 use std::fs;
 use std::fmt;
+use dirs::{data_dir, home_dir};
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Note {
    date: String,
@@ -20,7 +22,7 @@ impl Note {
         let now = Utc::now().to_string();
         let content = String::new();
         // Ensure the base directory is 'notes/'
-        path = PathBuf::from("notes").join(&path);
+        path = get_notes_path().join(&path);
         path.set_extension("json");  // Set the extension before the loop
         let original_file_stem = path.file_stem().unwrap().to_str().unwrap().to_string();
         let mut counter = 0;
@@ -69,17 +71,32 @@ impl Note {
         id
     }
 }
+pub fn load_notes_list() -> Vec<NoteID>{
+    let mut notes = Vec::new();
+    if let Some(dir) = PathBuf::from(".conf/.notes").parent() {
+        if !dir.exists() {
+            println!("No notes to load");
+            return notes;
+        }
+    }
+    // Load notes from .conf/.notes
+    let path = get_data_path().join("notes.nsv");
+    if let Ok(bytes) = fs::read(&path) {
+        notes = bincode::deserialize(&bytes).unwrap_or_else(|_| Vec::new());
+    }
+    notes
+}
+
 pub fn save_notes_list(notes: &Vec<NoteID>){
     let encoded: Vec<u8> = bincode::serialize(notes).unwrap();
-    if let Some(dir) = PathBuf::from(".conf/.notes").parent() { //create drectory if not present
+    let path = get_data_path().join("notes.nsv");
+    if let Some(dir) = path.parent() { //create directory if not present
         if !dir.exists() { 
             std::fs::create_dir_all(dir).unwrap();
         }
     }
-    fs::write(".conf/.notes", &encoded).expect("Couldnt save note data");
+    fs::write(path, &encoded).expect("Couldn't save note data");
 }
-
-
 #[derive(Debug, Serialize, Deserialize)]
 pub enum NoteType {
     Note,
@@ -110,6 +127,22 @@ pub fn set_active_note(notes: &mut Vec<NoteID>, active_note_name: &str) {
         note.active = note.name == active_note_name;
     }
 }
-pub fn export(){
+
+
+
+
+pub fn export() {
     
+}
+fn get_notes_path() -> PathBuf {
+    let mut path = home_dir().expect("Could not find home directory");
+    path.push(".notus");
+    path.push("notes");
+    path
+}
+fn get_data_path() -> PathBuf {
+    let mut path = data_dir().expect("Could not find data directory");
+    path.push("notus");
+    path.push("notes");
+    path
 }

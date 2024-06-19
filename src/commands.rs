@@ -160,4 +160,3 @@ pub fn create_note(s: &mut Cursive) {
             }),
     );
 }
-

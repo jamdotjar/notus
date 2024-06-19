@@ -1,6 +1,6 @@
 mod commands;
 mod notes;
-use notes::export;
+use notes::{export, load_notes_list};
 use std::{fs, path::PathBuf};
 use cursive::traits::*;
 use commands::create_note;
@@ -8,6 +8,7 @@ use cursive::views::{ Button, Dialog, LinearLayout, SelectView, TextView};
 use cursive::Cursive;
 use cursive::theme::{BorderStyle, Palette, PaletteColor, Color, BaseColor, Theme};
 use notes::NoteID;
+
 
 fn main() {
      //mandatory declaration of important stuff
@@ -78,21 +79,6 @@ fn select_note(s: &mut Cursive, item: &str) {
         .button("Export", move |s| notes::export());
 
     s.add_layer(dialog);
-}
-fn load_notes_list() -> Vec<NoteID>{
-    let mut notes = Vec::new();
-    if let Some(dir) = PathBuf::from(".conf/.notes").parent() {
-        if !dir.exists() {
-            println!("No notes to load");
-            return notes;
-        }
-    }
-    // Load notes from .conf/.notes
-    let path = PathBuf::from(".conf/.notes");
-    if let Ok(bytes) = fs::read(&path) {
-        notes = bincode::deserialize(&bytes).unwrap_or_else(|_| Vec::new());
-    }
-    notes
 }
 
 /* Tests, they can be ignored (they like to throw warnings) 
