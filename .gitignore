@@ -1,9 +1,44 @@
-/target
-.vscode
-.vscode/launch.json
-/notes
-.conf
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `cargo test`
+*.test
+
+# Intermediate files
+*.i
+
+# Object files
+*.o
+*.obj
+
+# Dependency directory
+/target/
+
+# VS Code configuration directory
+.vscode/
+
+# JetBrains IDEs configuration directory
+.idea/
+
+# macOS Finder directory
 .DS_Store
+
+# Cargo lock file (for libraries)
 Cargo.lock
-.idea
-.idx/integrations.json
+
+# Notes and temporary files
+/notes
+*.tmp
+*.log
+*.bak
+
+# GitHub directory
+.github/
+
+.conf/
+.vscode/
+/.idea/

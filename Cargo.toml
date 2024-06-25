@@ -8,6 +8,8 @@ repository = "https://github.com/jamdotjar/notus"
 keywords = ["notes", "markdown"]
 categories = ["command-line-utilities", "text-editors"]
 
+
+
 [dependencies]
 clap = { version = "4.5.1", features = ["derive"] }
 rand = "0.8.5"
