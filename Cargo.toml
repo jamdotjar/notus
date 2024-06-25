@@ -7,7 +7,11 @@ description = "A simple terminal notes app"
 repository = "https://github.com/jamdotjar/notus"
 keywords = ["notes", "markdown"]
 categories = ["command-line-utilities", "text-editors"]
-
+exclude = [
+    ".vscode/*",
+    "Cargo.toml.orig",
+    ".github/*"
+]
 
 
 [dependencies]

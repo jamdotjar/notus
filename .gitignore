@@ -42,3 +42,4 @@ Cargo.lock
 .conf/
 .vscode/
 /.idea/
+.github/
