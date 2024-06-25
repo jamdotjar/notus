@@ -6,8 +6,8 @@ Notus is a command-line interface (CLI) application for markdown note-taking. It
 
 ## Features Checklist
 
-[ ] **Dice Rolling**: Roll dice... groundbreaking, I know.
-[ ] **Note Management**: Create, edit, and manage notes 📝.
+- [ ] **Dice Rolling**: Roll dice... groundbreaking, I know.
+- [x] **Note Management**: Create, edit, and otherwise manage notes 📝.
 - [x] Create
 - [x] View
 - [x] Management
@@ -19,13 +19,19 @@ Notus is a command-line interface (CLI) application for markdown note-taking. It
 - [ ] **Dungeon Generation**: Generate dungeons and export them for use in VTT 🏰.
 
 - [ ] **Character Sheet Support**: Create and import character sheets 📚.
-
-- [ ] **Export**: Export your notes in various formats, roll skill checks, and track spells, inventory, etc. 📦.
+- [x] **Import**: import markdown files. (NOTE: currently must use a filepicker to import files, I am looking into a full TUI file picker)
+- [x] **Export**: Export your notes in various formats, roll skill checks, and track spells, inventory, etc. 📦.
     - [x] markdown export.
 
 - [ ] **Docs**: D&D is complicated; use the inbuilt docs to quickly look up spells, monster stats, loot tables, magic items, and more! 📖.
 
 ## Usage
+### Launching the Application
+To launch the application, run the following command in your terminal:
+
+```bash
+notus
+```
 
 ### Creating a Note
 1. Launch the application.
@@ -45,7 +51,18 @@ Notus is a command-line interface (CLI) application for markdown note-taking. It
 1. Select the note you want to export.
 2. Click on the "Export" button.
 3. Choose the desired format (e.g., markdown).
-4. Click "Save" to export the note.
+4. Click "Save" to export the note to your downloads.
+### Importing Notes
+1. Click on the "Import" button.
+2. Choose the file you want to import.
+3. Click "Open" to import the file.
+
+## Installation
+notus can be installed using cargo, the Rust package manager. To install notus, run the following command in your terminal:
+
+```bash
+cargo install notus
+```
 
 ## License
 

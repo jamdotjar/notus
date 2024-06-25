@@ -204,4 +204,3 @@ fn get_data_path() -> PathBuf {
     path.push("notes");
     path
 }
-

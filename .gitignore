@@ -5,5 +5,5 @@
 .conf
 .DS_Store
 Cargo.lock
-
+.idea
 .idx/integrations.json
