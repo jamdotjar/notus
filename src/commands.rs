@@ -1,11 +1,13 @@
-use crate::notes::{save_notes_list, Note, NoteID, NoteType};
-use cursive::{traits::*, views::*, Cursive};
-use cursive::utils::markup::markdown;
-use rand::Rng;
+use crate::notes::{export, save_notes_list, Note, NoteID, NoteType};
 use cursive::theme::{BaseColor, Color, PaletteColor, Theme};
+use cursive::utils::markup::markdown;
+use cursive::views::ThemedView;
+use cursive::{traits::*, views::*, Cursive};
+use dirs::home_dir;
+use rand::Rng;
+use rfd::{FileDialog, FileHandle};
 use std::fs;
 use std::path::PathBuf;
-use cursive::views::ThemedView;
 
 #[allow(dead_code)]
 // TODO: use this somewhere
@@ -21,7 +23,52 @@ fn roll(num: i32, die: i32) {
     println!("Total: {}", total);
 }
 
+pub fn import_note(s: &mut Cursive) {
+    let file = FileDialog::new()
+        .add_filter("markdown", &["md", "txt"])
+        .set_directory(home_dir().unwrap_or_else(|| PathBuf::from("/")))
+        .pick_file()
+        .expect("Failure to read file");
 
+    // TODO: fix crash when cancel is presed on dialouge
+    let content = fs::read_to_string(&file).expect("Failed to read file");
+    let name = file
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .into_owned();
+    s.with_user_data(|notes: &mut Vec<NoteID>| {
+        let mut note = Note::new(
+            name.clone(),
+            PathBuf::from(name.clone()),
+            NoteType::Note,
+            Vec::new(),
+            notes,
+        );
+        note.content = content;
+        note.save();
+        save_notes_list(notes);
+    });
+    s.call_on_name("notes", |view: &mut SelectView<String>| {
+        view.add_item_str(name);
+    });
+}
+pub fn export_note(s: &mut Cursive, item: &str) {
+    let path = get_notepath(item, s);
+    let content =
+        serde_json::from_str::<Note>(&std::fs::read_to_string(&path).expect("Failed to read file"))
+            .expect("Could not deserialize");
+
+    let usrpath = export(&content.content, &content.name);
+    s.add_layer(
+        Dialog::new()
+            .title("Export successful")
+            .content(TextView::new(format!("notename is stored at {}", usrpath)))
+            .button("Okay", |s| {
+                s.pop_layer();
+            }),
+    );
+}
 // Deletes note with name "item"
 pub fn delete_note(s: &mut Cursive, item: &str) {
     s.call_on_name("notes", |view: &mut SelectView<String>| {
@@ -44,90 +91,74 @@ pub fn delete_note(s: &mut Cursive, item: &str) {
     }
     s.pop_layer();
 }
-pub fn view_note(s: &mut Cursive, item: &str){
+pub fn view_note(s: &mut Cursive, item: &str) {
+    let path = get_notepath(item, s);
+    let raw_note = std::fs::read_to_string(&path).expect("Failed to read file");
+    let note_content = serde_json::from_str::<Note>(&raw_note)
+        .expect("Failed to deserialize content")
+        .content
+        .replace("\\n", "\n");
 
-            
-    let note = s.with_user_data(|note_list: &mut Vec<NoteID>| {
-        note_list.iter().find(|n| n.name == item).cloned()
-    });
-    if let Some(note) = note {
-        let path = note.unwrap().get_path().clone();
-        let raw_note = std::fs::read_to_string(&path).expect("Failed to read file");
-        let note_content = serde_json::from_str::<Note>(&raw_note)
-            .expect("Failed to deserialize content")
-            .content
-            .replace("\\n", "\n");
-
-        s.add_layer(Dialog::new()
-.content(
-            ScrollView::new(TextView::new(markdown::parse(note_content)))
-        ).button("Edit", {
-            let item = item.to_string();
-            move |s| {
+    s.add_layer(
+        Dialog::new()
+            .content(ScrollView::new(TextView::new(markdown::parse(
+                note_content,
+            ))))
+            .button("Edit", {
+                let item = item.to_string();
+                move |s| {
+                    s.pop_layer();
+                    edit_note(s, &item);
+                }
+            })
+            .button("Close", move |s| {
                 s.pop_layer();
-                
-                edit_note(s, &item);
-            }
-        }).button( "Close", move |s| {
-            s.pop_layer();
-        }
-        ).fixed_size((70, 20)));
-    }
-    
-    
+            })
+            .fixed_size((70, 20)),
+    );
 }
+
 pub fn edit_note(s: &mut Cursive, item: &str) {
-    let note = s.with_user_data(|note_list: &mut Vec<NoteID>| {
-        note_list.iter().find(|n| n.name == item).cloned()
-    });
+    let path = get_notepath(item, s);
+    let raw_note = std::fs::read_to_string(&path).expect("Failed to read file");
+    let note_content = serde_json::from_str::<Note>(&raw_note)
+        .expect("Failed to deserialize content")
+        .content
+        .replace("\\n", "\n");
+    let item_01 = item.to_string();
+    let item_02 = item.to_string();
+    let custom_theme = cursive::theme::Theme::retro();
+    s.add_layer(
+        Dialog::new()
+            .content(ThemedView::new(
+                custom_theme,
+                TextArea::new()
+                    .content(note_content)
+                    .with_name("edit_content"),
+            ))
+            .button("Save", move |s| {
+                let text = s
+                    .call_on_name("edit_content", |view: &mut TextArea| {
+                        view.get_content().to_string()
+                    })
+                    .unwrap();
+                let mut note_content: Note =
+                    serde_json::from_str(raw_note.as_str()).expect("Failed to read note");
+                note_content.content = text.clone();
+                let serialized =
+                    serde_json::to_string_pretty(&note_content).expect("Content didnt serialize");
 
-    if let Some(note) = note {
-        let path = note.unwrap().get_path().clone();
-        let raw_note = std::fs::read_to_string(&path).expect("Failed to read file");
-        let note_content = serde_json::from_str::<Note>(&raw_note)
-            .expect("Failed to deserialize content")
-            .content
-            .replace("\\n", "\n");
-        let item_01 = item.to_string();
-        let item_02 = item.to_string();
-        let custom_theme = cursive::theme::Theme::retro();
-        s.add_layer(
-            Dialog::new()
-            .content(
-                ThemedView::new(
-                    custom_theme,
-                    TextArea::new()
-                        .content(note_content)
-                        .with_name("edit_content")
-                )
-            )
-                .button("Save", move |s| {
-                    let text = s
-                        .call_on_name("edit_content", |view: &mut TextArea| {
-                            view.get_content().to_string()
-                        })
-                        .unwrap();
-                    let mut note_content: Note =
-                        serde_json::from_str(raw_note.as_str()).expect("Failed to read note");
-                    note_content.content = text.clone();
-                    let serialized = serde_json::to_string_pretty(&note_content)
-                        .expect("Content didnt serialize");
-                       
-                   
-                    fs::write(&path, serialized).expect("Could not save note");
-                    fs::write("console.txt", text.clone()).expect("Failed to write to file");
-                    s.pop_layer();
-                    view_note(s, &item_01);
-                })
-                .button("Cancel", move |s| {
-                    s.pop_layer();
-                    view_note(s, &item_02);
-                }).fixed_size((70, 22)),
-        );
+                fs::write(&path, serialized).expect("Could not save note");
 
-    } else {
-        s.add_layer(Dialog::info("Note file not found."));
-    }
+                s.pop_layer();
+                view_note(s, &item_01);
+            })
+            .button("Cancel", move |s| {
+                s.pop_layer();
+                view_note(s, &item_02);
+            })
+            .fixed_size((70, 22)),
+    );
 }
 pub fn create_note(s: &mut Cursive) {
     s.add_layer(
@@ -159,4 +190,12 @@ pub fn create_note(s: &mut Cursive) {
                 s.pop_layer();
             }),
     );
+}
+
+fn get_notepath(item: &str, s: &mut Cursive) -> PathBuf {
+    s.with_user_data(|note_list: &mut Vec<NoteID>| {
+        note_list.iter().find(|n| n.name == item).cloned()
+    })
+    .map(|note| note.unwrap().get_path().clone())
+    .expect("Note not found")
 }

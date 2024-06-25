@@ -6,20 +6,22 @@ Notus is a command-line interface (CLI) application for markdown note-taking. It
 
 ## Features Checklist
 
-- [ ] **Dice Rolling**: Roll dice... groundbreaking, I know.
-- [ ] **Note Management**: Create, edit, and manage notes 📝.
-- - [x] Create
-- - [x] View
-- - [x] Management
-- - - [x] Delete
-- - - [] Rename
-- - [ ] edit
+[ ] **Dice Rolling**: Roll dice... groundbreaking, I know.
+[ ] **Note Management**: Create, edit, and manage notes 📝.
+- [x] Create
+- [x] View
+- [x] Management
+-  [x] Delete
+-  [ ] Rename
+- [x] edit
+
 
 - [ ] **Dungeon Generation**: Generate dungeons and export them for use in VTT 🏰.
 
 - [ ] **Character Sheet Support**: Create and import character sheets 📚.
 
 - [ ] **Export**: Export your notes in various formats, roll skill checks, and track spells, inventory, etc. 📦.
+    - [x] markdown export.
 
 - [ ] **Docs**: D&D is complicated; use the inbuilt docs to quickly look up spells, monster stats, loot tables, magic items, and more! 📖.
 
@@ -39,6 +41,11 @@ Notus is a command-line interface (CLI) application for markdown note-taking. It
 1. Select a note from the list.
 2. Click "Delete" to remove the note.
 
+### Exporting Notes
+1. Select the note you want to export.
+2. Click on the "Export" button.
+3. Choose the desired format (e.g., markdown).
+4. Click "Save" to export the note.
 
 ## License
 

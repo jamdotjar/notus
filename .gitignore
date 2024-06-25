@@ -5,6 +5,5 @@
 .conf
 .DS_Store
 Cargo.lock
-console.txt
 
 .idx/integrations.json
