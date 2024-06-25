@@ -116,16 +116,26 @@ impl Note {
         id
     }
 }
+fn get_data_path() -> PathBuf {
+    let mut path = data_dir().expect("Could not find data directory");
+    path.push("notus");
+    path.push("notes");
+    if !path.exists() {
+        std::fs::create_dir_all(&path).expect("Failed to create data directory");
+    }
+    println!("Data path: {:?}", path); // Debug print
+    path
+}
+
 pub fn load_notes_list() -> Vec<NoteID> {
     let mut notes = Vec::new();
-    if let Some(dir) = PathBuf::from(".conf/.notes").parent() {
-        if !dir.exists() {
-            println!("No notes to load");
-            return notes;
-        }
+    let data_dir = get_data_path();
+    if !data_dir.exists() {
+        println!("No notes to load");
+        return notes;
     }
     // Load notes from .conf/.notes
-    let path = get_data_path().join("notes.nsv");
+    let path = data_dir.join("notes.nsv");
     if let Ok(bytes) = fs::read(&path) {
         notes = bincode::deserialize(&bytes).unwrap_or_else(|_| Vec::new());
     }
@@ -198,9 +208,4 @@ fn get_notes_path() -> PathBuf {
     path.push("notes");
     path
 }
-fn get_data_path() -> PathBuf {
-    let mut path = data_dir().expect("Could not find data directory");
-    path.push("notus");
-    path.push("notes");
-    path
-}
+

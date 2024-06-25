@@ -2,28 +2,13 @@
 
 Notus is a command-line interface (CLI) application for markdown note-taking. It is still in heavy development and is essentially my way of learning Rust 📘.
 
-## Features
+## Installation
+notus can be installed using cargo, the Rust package manager. To install notus, run the following command in your terminal:
 
-## Features Checklist
+```bash
+cargo install notus
+```
 
-- [ ] **Dice Rolling**: Roll dice... groundbreaking, I know.
-- [x] **Note Management**: Create, edit, and otherwise manage notes 📝.
-- [x] Create
-- [x] View
-- [x] Management
--  [x] Delete
--  [ ] Rename
-- [x] edit
-
-
-- [ ] **Dungeon Generation**: Generate dungeons and export them for use in VTT 🏰.
-
-- [ ] **Character Sheet Support**: Create and import character sheets 📚.
-- [x] **Import**: import markdown files. (NOTE: currently must use a filepicker to import files, I am looking into a full TUI file picker)
-- [x] **Export**: Export your notes in various formats, roll skill checks, and track spells, inventory, etc. 📦.
-    - [x] markdown export.
-
-- [ ] **Docs**: D&D is complicated; use the inbuilt docs to quickly look up spells, monster stats, loot tables, magic items, and more! 📖.
 
 ## Usage
 ### Launching the Application
@@ -57,12 +42,31 @@ notus
 2. Choose the file you want to import.
 3. Click "Open" to import the file.
 
-## Installation
-notus can be installed using cargo, the Rust package manager. To install notus, run the following command in your terminal:
 
-```bash
-cargo install notus
-```
+
+## Features
+
+## Features Checklist
+
+- [ ] **Dice Rolling**: Roll dice... groundbreaking, I know.
+- [x] **Note Management**: Create, edit, and otherwise manage notes 📝.
+- [x] Create
+- [x] View
+- [x] Management
+-  [x] Delete
+-  [ ] Rename
+- [x] edit
+
+
+- [ ] **Dungeon Generation**: Generate dungeons and export them for use in VTT 🏰.
+
+- [ ] **Character Sheet Support**: Create and import character sheets 📚.
+- [x] **Import**: import markdown files. (NOTE: currently must use a filepicker to import files, I am looking into a full TUI file picker)
+- [x] **Export**: Export your notes in various formats, roll skill checks, and track spells, inventory, etc. 📦.
+    - [x] markdown export.
+
+- [ ] **Docs**: D&D is complicated; use the inbuilt docs to quickly look up spells, monster stats, loot tables, magic items, and more! 📖.
+
 
 ## License
 
