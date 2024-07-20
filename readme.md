@@ -1,6 +1,7 @@
 # Notus: Notes for Us (A DnD notes app built in Rust 🦀)
+[![crates.io](https://img.shields.io/crates/v/notus?logo=rust&logoColor=white&style=flat-square)](https://crates.io/crates/notus)
 
-Notus is a command-line interface (CLI) application for markdown note-taking. It is still in heavy development and is essentially my way of learning Rust 📘.
+Notus is a command line application for markdown note-taking. It is still in heavy development and is essentially my way of learning Rust so expect some slightly mediocre code.
 
 ## Installation
 notus can be installed using cargo, the Rust package manager. To install notus, run the following command in your terminal:
@@ -9,7 +10,6 @@ notus can be installed using cargo, the Rust package manager. To install notus, 
 cargo install notus
 ```
 
-
 ## Usage
 ### Launching the Application
 To launch the application, run the following command in your terminal:
@@ -17,6 +17,7 @@ To launch the application, run the following command in your terminal:
 ```bash
 notus
 ```
+![image](https://github.com/user-attachments/assets/a78d207b-ff00-4fe2-847a-6c2a5934bafd)
 
 ### Creating a Note
 1. Launch the application.
@@ -24,8 +25,10 @@ notus
 3. Enter the name of the note and click "Ok".
 4. Edit the note content and click "Save".
 
+![image](https://github.com/user-attachments/assets/0329c410-bb6c-4b67-8758-9ad512cb58f6)
+
 ### Viewing a Note
-1. Select a note from the list.
+1. Select a note from the list by pressing enter ( or clicking if your terminal is fancy )
 2. Click "Open" to view the note.
 
 ### Deleting a Note
