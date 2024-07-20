@@ -5,7 +5,7 @@ use cursive::{traits::*, views::*, Cursive};
 use dirs::home_dir;
 use rand::Rng;
 use rfd::FileDialog;
-use std::fs;
+use std::fs::{self, write};
 use std::path::PathBuf;
 
 #[allow(dead_code)]
@@ -166,7 +166,7 @@ pub fn edit_note(s: &mut Cursive, item: &str) {
                         view.get_content().to_string()
                     })
                     .unwrap();
-                let note_content: Note = match serde_json::from_str(raw_note.as_str()) {
+                let mut note_content: Note = match serde_json::from_str(raw_note.as_str()) {
                     Ok(note) => note,
                     Err(e) => {
                         eprintln!("Failed to deserialize content: {}", e.to_string());
@@ -185,7 +185,7 @@ pub fn edit_note(s: &mut Cursive, item: &str) {
                 };
 
                 match fs::write(&path, serialized) {
-                    Ok(_) => Ok(()),
+                    Ok(_) => {},
                     Err(e) => {
                         eprintln!("Failed to save note: {}", e.to_string());
                         return;
