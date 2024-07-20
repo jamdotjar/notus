@@ -49,57 +49,22 @@ impl Note {
             note_type,
             tags,
             date: now,
-            id: id,
-            content: content,
+            id,
+            content,
         }
     }
-    //creates a note from a MARKDOWN file
-    pub fn from_file(path: &PathBuf, notes: &mut Vec<NoteID>) -> Self {
-        let mut name = path.file_stem().unwrap().to_str().unwrap().to_string();
-        let note_type = NoteType::Note;
-        let tags = Vec::new();
-        let now = Utc::now().to_string();
-        let content = fs::read_to_string(&path).unwrap();
-        //checks to see if the name of the note already exists
-        let mut counter = 0;
-        let mut new_path = path.clone();
-
-        while new_path.exists() {
-            counter += 1;
-            let new_file_name = format!("{}{}.json", name, counter);
-            new_path = PathBuf::from("notes").join(&new_file_name);
-        }
-        if counter > 0 {
-            name = format!("{}{}", name, counter);
-        }
-        let id = Note::generate_note_id(&name, &path);
-        notes.push(id.clone());
-        set_active_note(notes, &id.name);
-
-        Self {
-            name,
-            path: new_path,
-            note_type,
-            tags,
-            date: now,
-            id: id,
-            content: content,
-        }
-    }
-
     pub fn save(&self) {
         // make dir if not there
         if let Some(dir) = self.path.parent() {
             if !dir.exists() {
-                fs::create_dir_all(&dir).unwrap();
+                fs::create_dir_all(dir).unwrap();
             }
         }
         let serialized = serde_json::to_string_pretty(&self).unwrap();
         // try and write
-        if let Err(e) = fs::write(&self.path, &serialized) {
+        if let Err(e) = fs::write(&self.path, serialized) {
             eprintln!("Failed to write to file: {}", e);
         }
-        println!("Created: {}", &self.name)
     }
 
     fn generate_note_id(name: &String, path: &PathBuf) -> NoteID {
@@ -107,13 +72,12 @@ impl Note {
         name.hash(&mut hasher);
         path.hash(&mut hasher);
         let hash = hasher.finish();
-        let id = NoteID {
+        NoteID {
             name: name.clone(),
             id: hash as u32,
             path: path.clone(),
             active: true,
-        };
-        id
+        }
     }
 }
 fn get_data_path() -> PathBuf {
@@ -123,7 +87,6 @@ fn get_data_path() -> PathBuf {
     if !path.exists() {
         std::fs::create_dir_all(&path).expect("Failed to create data directory");
     }
-    println!("Data path: {:?}", path); // Debug print
     path
 }
 
@@ -136,7 +99,7 @@ pub fn load_notes_list() -> Vec<NoteID> {
     }
     // Load notes from .conf/.notes
     let path = data_dir.join("notes.nsv");
-    if let Ok(bytes) = fs::read(&path) {
+    if let Ok(bytes) = fs::read(path) {
         notes = bincode::deserialize(&bytes).unwrap_or_else(|_| Vec::new());
     }
     notes
@@ -151,7 +114,7 @@ pub fn save_notes_list(notes: &Vec<NoteID>) {
             std::fs::create_dir_all(dir).unwrap();
         }
     }
-    fs::write(path, &encoded).expect("Couldn't save note data");
+    fs::write(path, encoded).expect("Couldn't save note data");
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub enum NoteType {
@@ -178,7 +141,7 @@ impl fmt::Display for NoteID {
         write!(f, "{}", self.name) // Assuming NoteID has a single field that implements Display
     }
 }
-pub fn set_active_note(notes: &mut Vec<NoteID>, active_note_name: &str) {
+pub fn set_active_note(notes: &mut [NoteID], active_note_name: &str) {
     for note in notes.iter_mut() {
         note.active = note.name == active_note_name;
     }
@@ -208,4 +171,3 @@ fn get_notes_path() -> PathBuf {
     path.push("notes");
     path
 }
-

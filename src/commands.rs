@@ -1,11 +1,10 @@
 use crate::notes::{export, save_notes_list, Note, NoteID, NoteType};
-use cursive::theme::{BaseColor, Color, PaletteColor, Theme};
 use cursive::utils::markup::markdown;
 use cursive::views::ThemedView;
 use cursive::{traits::*, views::*, Cursive};
 use dirs::home_dir;
 use rand::Rng;
-use rfd::{FileDialog, FileHandle};
+use rfd::FileDialog;
 use std::fs;
 use std::path::PathBuf;
 
@@ -24,14 +23,23 @@ fn roll(num: i32, die: i32) {
 }
 
 pub fn import_note(s: &mut Cursive) {
-    let file = FileDialog::new()
+    let file = match FileDialog::new()
         .add_filter("markdown", &["md", "txt"])
         .set_directory(home_dir().unwrap_or_else(|| PathBuf::from("/")))
         .pick_file()
-        .expect("Failure to read file");
+    {
+        Some(path) => path,
+        None => return,
+    };
 
     // TODO: fix crash when cancel is presed on dialouge
-    let content = fs::read_to_string(&file).expect("Failed to read file");
+    let content = match fs::read_to_string(&file) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("Failed to read file: {}", e);
+            return;
+        }
+    };
     let name = file
         .file_stem()
         .unwrap_or_default()
@@ -55,10 +63,21 @@ pub fn import_note(s: &mut Cursive) {
 }
 pub fn export_note(s: &mut Cursive, item: &str) {
     let path = get_notepath(item, s);
-    let content =
-        serde_json::from_str::<Note>(&std::fs::read_to_string(&path).expect("Failed to read file"))
-            .expect("Could not deserialize");
-
+    let content = {
+        match std::fs::read_to_string(&path) {
+            Ok(content) => match serde_json::from_str::<Note>(&content) {
+                Ok(content) => content,
+                Err(e) => {
+                    eprintln!("Failed to deserialize content: {}", e);
+                    return;
+                }
+            },
+            Err(e) => {
+                eprintln!("Failed to read file {}", e);
+                return;
+            }
+        }
+    };
     let usrpath = export(&content.content, &content.name);
     s.add_layer(
         Dialog::new()
@@ -83,7 +102,7 @@ pub fn delete_note(s: &mut Cursive, item: &str) {
     {
         s.with_user_data(|note_list: &mut Vec<NoteID>| {
             let note = note_list.remove(index.unwrap());
-            if let Err(e) = std::fs::remove_file(&note.path) {
+            if let Err(e) = std::fs::remove_file(note.path) {
                 eprintln!("Failed to delete note file: {}", e);
             }
             save_notes_list(note_list);
@@ -93,12 +112,14 @@ pub fn delete_note(s: &mut Cursive, item: &str) {
 }
 pub fn view_note(s: &mut Cursive, item: &str) {
     let path = get_notepath(item, s);
-    let raw_note = std::fs::read_to_string(&path).expect("Failed to read file");
-    let note_content = serde_json::from_str::<Note>(&raw_note)
-        .expect("Failed to deserialize content")
-        .content
-        .replace("\\n", "\n");
-
+    let raw_note = std::fs::read_to_string(path).expect("Failed to read file");
+    let note_content = match serde_json::from_str::<Note>(&raw_note) {
+        Ok(content) => content.content.replace("\\n", "\n"),
+        Err(e) => {
+            eprintln!("Failed to deserialize content: {}", e.to_string());
+            return;
+        }
+    };
     s.add_layer(
         Dialog::new()
             .content(ScrollView::new(TextView::new(markdown::parse(
@@ -121,10 +142,13 @@ pub fn view_note(s: &mut Cursive, item: &str) {
 pub fn edit_note(s: &mut Cursive, item: &str) {
     let path = get_notepath(item, s);
     let raw_note = std::fs::read_to_string(&path).expect("Failed to read file");
-    let note_content = serde_json::from_str::<Note>(&raw_note)
-        .expect("Failed to deserialize content")
-        .content
-        .replace("\\n", "\n");
+    let note_content = match serde_json::from_str::<Note>(&raw_note) {
+        Ok(content) => content.content.replace("\\n", "\n"),
+        Err(e) => {
+            eprintln!("Failed to deserialize content: {}", e.to_string());
+            return;
+        }
+    };
     let item_01 = item.to_string();
     let item_02 = item.to_string();
     let custom_theme = cursive::theme::Theme::retro();
@@ -142,13 +166,31 @@ pub fn edit_note(s: &mut Cursive, item: &str) {
                         view.get_content().to_string()
                     })
                     .unwrap();
-                let mut note_content: Note =
-                    serde_json::from_str(raw_note.as_str()).expect("Failed to read note");
-                note_content.content = text.clone();
-                let serialized =
-                    serde_json::to_string_pretty(&note_content).expect("Content didnt serialize");
+                let note_content: Note = match serde_json::from_str(raw_note.as_str()) {
+                    Ok(note) => note,
+                    Err(e) => {
+                        eprintln!("Failed to deserialize content: {}", e.to_string());
+                        return;
+                    }
+                };
 
-                fs::write(&path, serialized).expect("Could not save note");
+                note_content.content = text.clone();
+
+                let serialized = match serde_json::to_string_pretty(&note_content) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Failed to serialize content: {}", e.to_string());
+                        return;
+                    }
+                };
+
+                match fs::write(&path, serialized) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        eprintln!("Failed to save note: {}", e.to_string());
+                        return;
+                    }
+                };
 
                 s.pop_layer();
                 view_note(s, &item_01);

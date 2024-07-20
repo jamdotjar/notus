@@ -5,12 +5,10 @@ use cursive::theme::{BaseColor, BorderStyle, Color, Palette, PaletteColor, Theme
 use cursive::traits::*;
 use cursive::views::{Button, Dialog, LinearLayout, SelectView, TextView};
 use cursive::Cursive;
-use notes::NoteID;
-use notes::{export, load_notes_list};
-use std::{fs, path::PathBuf};
+use notes::load_notes_list;
 
 fn main() {
-    //mandatory declaration of important stuff
+    //mandatory declaration of important vars
     let notes_list = load_notes_list();
     let mut siv = cursive::default();
 
@@ -26,7 +24,7 @@ fn main() {
     });
     siv.set_user_data(notes_list.clone());
     let notelist = SelectView::<String>::new()
-        .on_submit(|s, item| select_note(s, item))
+        .on_submit(select_note)
         .with_name("notes")
         .min_size((20, 5))
         .scrollable();
@@ -58,12 +56,8 @@ fn main() {
             s.pop_layer();
         }
     });
-    let notes_clone = notes_list.clone();
-    let notes_clone_for_view = notes_clone.clone();
-    siv.with_user_data(move |notes: &mut Vec<NoteID>| {
-        //this is how Cursive handles globals, kinda
-        let notes = notes_clone.clone();
-    });
+
+    let notes_clone_for_view = notes_list.clone();
     siv.call_on_name("notes", move |view: &mut SelectView<String>| {
         //populating the display from the notes list
         for note in notes_clone_for_view.iter() {
@@ -92,7 +86,3 @@ fn select_note(s: &mut Cursive, item: &str) {
 
     s.add_layer(dialog);
 }
-
-/* Tests, they can be ignored (they like to throw warnings)
-Now that you are no longer paying attention, I can mention that the .notes in .conf is probably not the most bestest storage system :0
-*/
